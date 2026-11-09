@@ -1,0 +1,33 @@
+# Secret credentials from older local builds
+wifi_config.h
+**/wifi_config.h
+.env
+.env.*
+*.pem
+*.key
+*.p12
+secrets.*
+credentials.*
+
+# Local build files, backups, editors
+.pio/
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.bak
+*.before*
+*.orig
+*.old
+*.tmp
+*~
+*.swp
+*backup*/
+
+# Board-specific NVS / calibration / build artifacts
+data/touch_cal.txt
+*nvs*.bin
+*.elf
+*.map
+
+# Image assets under data/*.bin are intended to be committed.

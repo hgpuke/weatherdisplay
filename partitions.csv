@@ -1,0 +1,9 @@
+# Big app partitions for 4 MB of flash - written by LCD Wizard.
+# App 3 MB, SPIFFS 896 KB. PlatformIO reads this through
+# board_build.partitions; the Arduino IDE uses it because it sits beside the sketch.
+# Name,   Type, SubType,  Offset,   Size
+nvs, data, nvs, 0x9000, 0x5000,
+otadata, data, ota, 0xE000, 0x2000,
+app0, app, ota_0, 0x10000, 0x300000,
+spiffs, data, spiffs, 0x310000, 0xE0000,
+coredump, data, coredump, 0x3F0000, 0x10000,
