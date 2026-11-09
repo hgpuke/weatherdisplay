@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#163c62">
+<title>Konfigurera Väderdisplay</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#193a55;background:#eaf3fa}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:linear-gradient(#dbeefa,#f4f9fc)}
+main{max-width:500px;margin:0 auto;padding:26px 16px 54px}.sheet{background:#fff;border:1px solid #d7e4ed;border-radius:20px;box-shadow:0 8px 32px #163c6217;padding:25px 23px}
+h1{font-size:1.65rem;line-height:1.2;letter-spacing:-.035em;margin:0 0 12px;color:#133a5b}
+.lead{line-height:1.55;color:#567087;margin:0 0 23px}section{padding-top:18px;margin-top:17px;border-top:1px solid #e5edf2}
+label{display:block;font-size:.91rem;font-weight:650;margin-bottom:8px}input,select,button{font:inherit}
+input,select{width:100%;border:1px solid #9fb6c5;padding:12px 13px;background:#fff;color:#17364b;border-radius:10px;min-height:48px}
+input:focus,select:focus,button:focus-visible{outline:3px solid #7ac0ec;outline-offset:2px}
+input:disabled,select:disabled{background:#f1f4f6;color:#8a9ba7}
+button{border:0;border-radius:10px;padding:13px 17px;font-weight:650;cursor:pointer}
+button.primary{width:100%;background:#145f90;color:#fff;min-height:48px}
+button.primary:hover:not(:disabled){background:#0f507b}button:disabled{opacity:.48;cursor:not-allowed}
+button.secondary{background:#e6eff6;color:#145f90}button.linkish{font-size:.85rem;padding:6px 2px;background:transparent;color:#145f90;text-decoration:underline}
+.status{font-size:.9rem;border-radius:10px;padding:11px 13px;line-height:1.5;background:#e9f3fa;margin-top:11px}
+.status.error{background:#fceceb;color:#842d27}.status.ok{background:#e4f4e9;color:#24603b}
+.row{display:flex;gap:8px;align-items:center}.row > *:first-child{flex:1}
+.hint{font-size:.83rem;color:#657e90;line-height:1.5;margin:8px 0 0}
+.results{list-style:none;padding:0;margin:8px 0 0;border:1px solid #d4e3ec;border-radius:10px;overflow:hidden}
+.results li+li{border-top:1px solid #e2ebf1}.results button{padding:11px 13px;border-radius:0;width:100%;background:#fff;text-align:left;font-weight:500;color:#204863;line-height:1.4}
+.results button:hover{background:#eaf4fa}.resultDetail{display:block;font-size:.79rem;color:#62798b;margin-top:3px}
+.field{margin:16px 0}.hide{display:none!important}.selected{border-radius:9px;background:#e6f4e9;padding:11px;margin-top:8px;color:#1c5932}
+.small{color:#6b8391;font-size:.81rem;line-height:1.5;margin-top:19px}
+.brand{display:flex;gap:10px;align-items:center;margin:0 0 16px}.brandicon{width:43px;height:43px;display:grid;place-items:center;background:#d7efff;border-radius:11px;font-size:24px}
+#done{padding:20px;text-align:center;background:#e3f5e8;border-radius:14px;color:#205d38;margin-top:20px}
+@media (max-width:410px){.sheet{padding:20px 16px}h1{font-size:1.46rem}}
+</style>
+</head>
+<body>
+<main><div class="sheet">
+  <div class="brand"><div class="brandicon" aria-hidden="true">🌤️</div><div><strong>Väderdisplay</strong><div class="hint">Konfiguration via Bluetooth</div></div></div>
+  <h1>Konfigurera Väderdisplay</h1>
+  <p class="lead">Välj väderdisplayen, ditt WiFi-nätverk och orten för prognosen. Allt görs på samma sida.</p>
+  <button id="connect" class="primary">1. Anslut Väderdisplayen</button>
+  <div role="status" aria-live="polite" id="bleStatus" class="status">Slå på Bluetooth och tryck på knappen ovan. Använd Chrome på Android eller Chrome/Edge på datorn.</div>
+
+  <section>
+    <label for="wifi">2. Välj WiFi-nätverk (2,4 GHz)</label>
+    <select id="wifi" disabled><option value="">Anslut till Väderdisplayen först</option></select>
+    <p id="signal" class="hint">Nätverken kommer från själva väderdisplayen, sorterade efter signalstyrka.</p>
+    <button id="manualToggle" type="button" class="linkish hide">Mitt nätverk syns inte</button>
+    <div id="manualWrap" class="field hide"><label for="manualWifi">Nätverksnamn (SSID)</label><input id="manualWifi" maxlength="32" autocomplete="off" placeholder="Ange nätverksnamn"></div>
+    <div class="field"><label for="password">WiFi-lösenord</label><input type="password" id="password" autocomplete="off" disabled placeholder="Lösenord"><p class="hint">Lösenordet skickas direkt till Väderdisplayen via Bluetooth, inte till denna webbplats.</p></div>
+  </section>
+
+  <section>
+    <label for="cityInput">3. Välj ort för SMHI-prognosen</label>
+    <input type="search" id="cityInput" placeholder="Exempel: Boxholm, Linköping, Ödeshög" autocomplete="off" spellcheck="false">
+    <ul class="results hide" id="cityResults"></ul>
+    <div id="citySelected" class="selected hide"></div>
+    <p class="hint">Ortnamn söks i Sverige. Vi använder en ortsökningstjänst för koordinaterna – själva vädret hämtas senare från SMHI.</p>
+  </section>
+
+  <section>
+    <button id="save" class="primary" disabled>4. Anslut och spara</button>
+    <div role="status" aria-live="polite" id="saveStatus" class="status">Välj först enheten, nätverket och en ort.</div>
+  </section>
+  <div id="done" class="hide"><strong>✓ Konfiguration sparad!</strong><p>Väderdisplayen är ansluten till WiFi och har fått din ort.</p></div>
+  <p class="small">Testversion 0.6: vi verifierar Bluetooth, WiFi-skanning och sparande av ort + koordinater. Den vanliga SMHI-vyn kopplas in senare. Webbplatsen fungerar bara i en webbläsare med Web Bluetooth och HTTPS (eller localhost).</p>
+</div></main>
+<script>
+(() => {
+'use strict';
+const SVC = '00467768-6228-2272-4663-277478268000';
+const STATE = '00467768-6228-2272-4663-277478268001';
+const ERROR = '00467768-6228-2272-4663-277478268002';
+const RPC = '00467768-6228-2272-4663-277478268003';
+const NET = 'c0161234-4455-4f66-8777-123456789001';
+const LOC = 'c0161234-4455-4f66-8777-123456789002';
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder();
+let device, netChar, locChar, rpcChar, stateChar, errorChar;
+let networks = [], selectedCity = null, saving = false, scanBusy = false;
+let wifiReady = false, pendingResolve = null, pendingReject = null;
+let geocodeTimer, geocodeAbort;
+
+function status(id, text, kind='') { const el=$(id); el.textContent=text; el.className='status'+(kind?' '+kind:''); }
+function checkReady() {
+  const ssid=getSSID();
+  const passwordOK=!isProtected() || $('password').value.length>0;
+  $('save').disabled=!device || !device.gatt.connected || !ssid || !passwordOK || !selectedCity || saving || scanBusy;
+}
+function getSSID() { return ($('manualWrap').classList.contains('hide') ? $('wifi').value : $('manualWifi').value.trim()); }
+function isProtected() {
+  if (!$('manualWrap').classList.contains('hide')) return true;
+  return networks.find(n=>n.ssid===$('wifi').value)?.secured ?? true;
+}
+function changeWifi() {
+  $('password').disabled=!getSSID() || !isProtected();
+  $('password').placeholder=isProtected()?'WiFi-lösenord':'Öppet nätverk – inget lösenord';
+  if(!isProtected()) $('password').value='';
+  const n=networks.find(x=>x.ssid===getSSID());
+  $('signal').textContent=n ? `Signal: ${n.rssi} dBm · ${n.secured?'Lösenord krävs':'Öppet nätverk'}` : 'Nätverksnamnet anges manuellt.';
+  checkReady();
+}
+
+async function readNetwork(ix, part=0) {
+  // Each read response is <=20 bytes, even when default ATT MTU is only 23.
+  await netChar.writeValueWithResponse(new Uint8Array([ix,part]));
+  const v=await netChar.readValue();
+  const b=new Uint8Array(v.buffer,v.byteOffset,v.byteLength);
+  if (b.length<4) throw Error('Ofullständigt nätverkssvar');
+  return {count:b[0], rssi:(b[1]<<24)>>24, secured:!!b[2], len:b[3], bytes:b.slice(4)};
+}
+async function loadNetworks() {
+  scanBusy=true; checkReady();
+  $('wifi').disabled=true;
+  $('wifi').replaceChildren(new Option('Söker efter nätverk…',''));
+  try {
+    const first=await readNetwork(0);
+    const list=[];
+    for(let ix=1;ix<=first.count;ix++) {
+      const p0=await readNetwork(ix,0);
+      const name=new Uint8Array(p0.len);
+      name.set(p0.bytes.slice(0,p0.len),0);
+      for (let part=1;part*16<p0.len;part++) {
+        const p=await readNetwork(ix,part);
+        name.set(p.bytes.slice(0,p0.len-part*16),part*16);
+      }
+      const ssid=dec.decode(name);
+      if(ssid) list.push({ssid,rssi:p0.rssi,secured:p0.secured});
+    }
+    networks=list.sort((a,b)=>b.rssi-a.rssi);
+    $('wifi').replaceChildren(new Option(list.length?'Välj nätverk':'Inga nätverk hittades',''));
+    for(const n of networks) $('wifi').add(new Option(`${n.ssid} · ${n.rssi} dBm ${n.secured?'🔒':'○'}`,n.ssid));
+    $('wifi').disabled=!list.length;
+    $('manualToggle').classList.remove('hide');
+    status('bleStatus', `Bluetooth anslutet. Hittade ${networks.length} nätverk (starkast först).`,'ok');
+  } catch (err) {
+    status('bleStatus','Bluetooth fungerar, men nätverkslistan kunde inte hämtas: '+err.message,'error');
+    $('wifi').replaceChildren(new Option('Nätverkslistan saknas',''));
+    $('manualToggle').classList.remove('hide');
+  } finally {
+    scanBusy=false; changeWifi();
+  }
+}
+
+// IMPORTANT: requestDevice is initiated immediately by the actual button click.
+$('connect').addEventListener('click',async () => {
+  if(!navigator.bluetooth || !window.isSecureContext) {
+    status('bleStatus','Web Bluetooth kräver Chrome/Edge och HTTPS (eller localhost).','error'); return;
+  }
+  try {
+    device=await navigator.bluetooth.requestDevice({filters:[{services:[SVC]}]});
+    status('bleStatus','Ansluter via Bluetooth…');
+    device.addEventListener('gattserverdisconnected',()=>{
+      status('bleStatus',wifiReady?'WiFi anslutet.':'Bluetooth frånkopplat. Anslut igen om du vill konfigurera.',wifiReady?'ok':'error');
+      if(!wifiReady && pendingReject) pendingReject(new Error('Bluetooth kopplades från'));
+      checkReady();
+    });
+    const gatt=await device.gatt.connect();
+    const service=await gatt.getPrimaryService(SVC);
+    // Subscribe to Improv state BEFORE sending WiFi credentials.
+    stateChar=await service.getCharacteristic(STATE);
+    errorChar=await service.getCharacteristic(ERROR);
+    rpcChar=await service.getCharacteristic(RPC);
+    netChar=await service.getCharacteristic(NET);
+    locChar=await service.getCharacteristic(LOC);
+    stateChar.addEventListener('characteristicvaluechanged',e=>{
+      const code=e.target.value.getUint8(0);
+      if(code===4) {
+        wifiReady=true;
+        if(pendingResolve) pendingResolve();
+      }
+    });
+    errorChar.addEventListener('characteristicvaluechanged',e=>{
+      const code=e.target.value.getUint8(0);
+      if(code!==0 && pendingReject) pendingReject(new Error(`WiFi-anslutning misslyckades (felkod ${code})`));
+    });
+    await stateChar.startNotifications();
+    await errorChar.startNotifications();
+    $('connect').textContent='Byt Väderdisplay';
+    await loadNetworks();
+  } catch(err) {
+    status('bleStatus','Kunde inte ansluta via Bluetooth: '+(err?.message||err),'error');
+    checkReady();
+  }
+});
+
+$('wifi').addEventListener('change',changeWifi);
+$('manualToggle').addEventListener('click',()=>{
+  const el=$('manualWrap');
+  el.classList.toggle('hide');
+  $('manualToggle').textContent=el.classList.contains('hide')?'Mitt nätverk syns inte':'Använd nätverkslistan';
+  changeWifi();
+});
+$('manualWifi').addEventListener('input',changeWifi);
+$('password').addEventListener('input',checkReady);
+
+function showCities(results) {
+  const root=$('cityResults'); root.replaceChildren();
+  const items=results.filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude));
+  if(!items.length) {root.classList.add('hide');status('saveStatus','Inga orter hittades. Kontrollera stavningen.');return;}
+  for(const item of items) {
+    const li=document.createElement('li'),button=document.createElement('button');
+    button.type='button';button.textContent=item.name;
+    const d=document.createElement('span');d.className='resultDetail';
+    d.textContent=[item.admin2,item.admin1,'Sverige'].filter(Boolean).join(', ');
+    button.appendChild(d);
+    button.addEventListener('click',()=>{
+      selectedCity={name:item.name,latitude:item.latitude,longitude:item.longitude};
+      $('cityInput').value=item.name;
+      root.classList.add('hide');
+      $('citySelected').classList.remove('hide');
+      $('citySelected').textContent=`✓ ${item.name}, ${item.admin1||'Sverige'} (${item.latitude.toFixed(4)}, ${item.longitude.toFixed(4)})`;
+      checkReady();
+      status('saveStatus','Ort vald. Kontrollera nätverk och tryck Anslut och spara.');
+    });
+    li.appendChild(button);root.appendChild(li);
+  }
+  root.classList.remove('hide');
+}
+async function fetchCities(q) {
+  if(geocodeAbort) geocodeAbort.abort();
+  if(q.length<2) { $('cityResults').classList.add('hide'); return; }
+  geocodeAbort=new AbortController();
+  status('saveStatus','Söker svenska ortnamn…');
+  try {
+    const u=new URL('https://geocoding-api.open-meteo.com/v1/search');
+    u.searchParams.set('name',q);u.searchParams.set('count','10');
+    u.searchParams.set('language','sv');u.searchParams.set('countryCode','SE');
+    const response=await fetch(u,{signal:geocodeAbort.signal});
+    if(!response.ok) throw Error('HTTP '+response.status);
+    const body=await response.json();
+    showCities(body.results||[]);
+  } catch(err) {
+    if(err.name==='AbortError') return;
+    status('saveStatus','Ortsökningen kunde inte nås. Kontrollera Internetanslutningen.','error');
+  }
+}
+$('cityInput').addEventListener('input',()=>{
+  clearTimeout(geocodeTimer);
+  selectedCity=null;
+  $('citySelected').classList.add('hide');
+  checkReady();
+  const q=$('cityInput').value.trim();
+  geocodeTimer=setTimeout(()=>fetchCities(q),500);
+});
+
+async function sendLocation() {
+  const loc=`${selectedCity.name}\n${selectedCity.latitude.toFixed(6)}\n${selectedCity.longitude.toFixed(6)}`;
+  const data=enc.encode(loc);
+  // Limit each BLE write to 19 bytes, independent of negotiated MTU.
+  await locChar.writeValueWithResponse(new Uint8Array([1]));
+  for(let off=0;off<data.length;off+=18) {
+    const part=data.slice(off,off+18);
+    const b=new Uint8Array(1+part.length);b[0]=2;b.set(part,1);
+    await locChar.writeValueWithResponse(b);
+  }
+  await locChar.writeValueWithResponse(new Uint8Array([3]));
+  const s=await locChar.readValue();
+  if(s.getUint8(0)!==0) throw Error('Enheten avvisade orten (kod '+s.getUint8(0)+')');
+}
+async function sendWifi(ssid,password) {
+  const a=enc.encode(ssid),b=enc.encode(password);
+  if(a.length>32||b.length>64) throw Error('Nätverksnamn/lösenord för långt');
+  const packet=new Uint8Array(2+1+a.length+1+b.length+1);
+  packet[0]=1;packet[1]=2+a.length+b.length;packet[2]=a.length;
+  packet.set(a,3);packet[3+a.length]=b.length;packet.set(b,4+a.length);
+  packet[packet.length-1]=packet.slice(0,-1).reduce((s,n)=>(s+n)&255,0);
+  wifiReady=false;
+  return new Promise((resolve,reject)=>{
+    let finished=false;
+    const timer=setTimeout(()=>complete(new Error('Timeout – ingen bekräftelse inom 30 sekunder')),30000);
+    function complete(err) {
+      if(finished)return;finished=true;clearTimeout(timer);
+      pendingResolve=null;pendingReject=null;
+      if(err)reject(err);else resolve();
+    }
+    pendingResolve=()=>complete(null);
+    pendingReject=err=>complete(err);
+    rpcChar.writeValueWithResponse(packet).catch(err=>complete(err));
+  });
+}
+$('save').addEventListener('click',async()=>{
+  const ssid=getSSID();
+  if(!ssid||!selectedCity||!device?.gatt?.connected) return;
+  saving=true;checkReady();
+  try {
+    status('saveStatus','Skickar ort och koordinater via Bluetooth…');
+    await sendLocation();
+    status('saveStatus',`Ansluter till ${ssid}… Detta kan ta upp till 20 sekunder.`);
+    await sendWifi(ssid,$('password').value);
+    status('saveStatus',`Klart! ${selectedCity.name} sparad på Väderdisplayen.`,'ok');
+    $('done').classList.remove('hide');
+    $('save').textContent='Konfigurationen är klar';
+    $('password').value='';
+  } catch(err) {
+    status('saveStatus',`Det gick inte att slutföra: ${err.message}. Kontrollera lösenord och försök igen.`,'error');
+  } finally {saving=false;checkReady();}
+});
+if(!window.isSecureContext||!navigator.bluetooth)status('bleStatus','Denna webbläsare saknar Web Bluetooth eller sidan öppnades utan HTTPS. Använd Chrome på Android/PC och en HTTPS-adress.','error');
+})();
+</script>
+</body></html>
