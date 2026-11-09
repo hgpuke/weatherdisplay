@@ -167,7 +167,7 @@ void computeAndPublish() {
     next.periodStart=now; next.periodEnd=now+8*3600;
   } else {
     strlcpy(next.periodName,"Kvällen",sizeof(next.periodName));
-    next.periodStart=now; next.periodEnd=localAt(now,0,21);
+    next.periodStart=now; next.periodEnd=localAt(now,0,22);
   }
   next.main=summarize(next.periodStart,next.periodEnd);
   for(int i=0;i<5;++i) {
